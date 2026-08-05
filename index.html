@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <!-- Biblioteki Three.js oraz GSAP dla animacji miasta -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
     <link rel="stylesheet" href="assets/css/styles.css">
     <title>KAM3D - 3D Models Library</title>
     <script>
@@ -83,19 +87,101 @@
     </div>
 
     <div class="flex w-full h-screen">
-        <main class="flex-1 main-content-scroll custom-scrollbar relative pt-32 pb-8 px-4 sm:px-8">
+        <main class="flex-1 main-content-scroll custom-scrollbar relative">
 
             <!-- HOME -->
-            <section id="home" class="tab-content">
-                <div class="max-w-4xl mx-auto text-center mt-20">
-                    <h1 class="text-5xl font-bold text-ln-gray-900 mb-6">Welcome to 3D Model Hub</h1>
-                    <p class="text-lg text-ln-gray-500 mb-8">Explore, edit and build amazing 3D worlds – all in one place.</p>
-                    <button class="px-8 py-3 bg-ln-orange text-white rounded-xl text-lg font-semibold shadow-ln-sidebar hover:bg-orange-600 transition-colors">Get Started</button>
+            <section id="home" class="tab-content min-h-screen w-full">
+                
+                <!-- 1. HERO SECTION (100dvh x 100dvw) -->
+                <div class="relative w-[100dvw] h-[100dvh] overflow-hidden flex items-center justify-center">
+                    
+                    <!-- Three.js Canvas Container -->
+                    <div id="city-canvas-container" class="absolute inset-0 w-full h-full z-0"></div>
+
+                    <!-- Overlay Content -->
+                    <div class="relative z-10 max-w-4xl mx-auto text-center px-4">
+                        <h1 class="text-5xl md:text-6xl font-bold text-white mb-6 drop-shadow-md">
+                            Welcome to 3D Model Hub
+                        </h1>
+                        <p class="text-lg md:text-xl text-gray-200 mb-8 max-w-2xl mx-auto drop-shadow">
+                            Explore, edit and build amazing 3D worlds – all in one place.
+                        </p>
+                        <button class="px-8 py-3.5 bg-ln-orange text-white rounded-xl text-lg font-semibold shadow-ln-sidebar hover:bg-orange-600 transition-colors pointer-events-auto">
+                            Get Started
+                        </button>
+                    </div>
+
                 </div>
+
+                <!-- 2. FEATURES SECTION (100dvh) -->
+                <div class="min-h-[100dvh] w-full bg-ln-gray-50 flex items-center justify-center py-20 px-4 sm:px-8">
+                    <div class="max-w-6xl mx-auto">
+                        <div class="text-center mb-16">
+                            <h2 class="text-3xl sm:text-4xl font-bold text-ln-gray-900 mb-4">Core Ecosystem Features</h2>
+                            <p class="text-ln-gray-500 max-w-xl mx-auto">Everything you need to visualize, prototype, and build interactive 3D Web applications.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <!-- Card 1 -->
+                            <div class="bg-white p-8 rounded-20 shadow-ln-card ring-1 ring-ln-gray-200 hover:-translate-y-1 transition-transform">
+                                <div class="w-12 h-12 bg-ln-orange/10 rounded-xl flex items-center justify-center text-ln-orange font-bold text-xl mb-6">01</div>
+                                <h3 class="text-xl font-bold text-ln-gray-900 mb-3">Model Repository</h3>
+                                <p class="text-ln-gray-500 text-sm leading-relaxed">High-performance .GLB asset library pre-optimized for WebGL rendering and quick integration.</p>
+                            </div>
+
+                            <!-- Card 2 -->
+                            <div class="bg-white p-8 rounded-20 shadow-ln-card ring-1 ring-ln-gray-200 hover:-translate-y-1 transition-transform">
+                                <div class="w-12 h-12 bg-ln-orange/10 rounded-xl flex items-center justify-center text-ln-orange font-bold text-xl mb-6">02</div>
+                                <h3 class="text-xl font-bold text-ln-gray-900 mb-3">Live Shader Editor</h3>
+                                <p class="text-ln-gray-500 text-sm leading-relaxed">Customize lighting, material textures, and procedural parameters directly in browser runtime.</p>
+                            </div>
+
+                            <!-- Card 3 -->
+                            <div class="bg-white p-8 rounded-20 shadow-ln-card ring-1 ring-ln-gray-200 hover:-translate-y-1 transition-transform">
+                                <div class="w-12 h-12 bg-ln-orange/10 rounded-xl flex items-center justify-center text-ln-orange font-bold text-xl mb-6">03</div>
+                                <h3 class="text-xl font-bold text-ln-gray-900 mb-3">World Generator</h3>
+                                <p class="text-ln-gray-500 text-sm leading-relaxed">Assemble complex procedural 3D environments with zero friction and automated mesh optimization.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. STATS & PLATFORM SECTION (100dvh) -->
+                <div class="min-h-[100dvh] w-full bg-white flex items-center justify-center py-20 px-4 sm:px-8 border-t border-ln-gray-200">
+                    <div class="max-w-5xl mx-auto w-full">
+                        <div class="bg-ln-gray-900 text-white rounded-3xl p-8 sm:p-14 shadow-ln-browser flex flex-col md:flex-row items-center justify-between gap-10">
+                            <div class="space-y-4 max-w-md">
+                                <span class="text-xs uppercase tracking-widest text-ln-orange font-bold">Performance First</span>
+                                <h2 class="text-3xl font-bold">Built for demanding 3D Web Graphics</h2>
+                                <p class="text-ln-gray-450 text-sm leading-relaxed">Powered by Three.js and WebGL. Responsive, ultra-fast rendering pipeline fine-tuned for high-frame-rate experiences across mobile and desktop devices.</p>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-6 w-full md:w-auto">
+                                <div class="bg-ln-gray-800 p-6 rounded-2xl border border-ln-gray-600/30 text-center">
+                                    <div class="text-3xl font-bold text-white mb-1">60 FPS</div>
+                                    <div class="text-xs text-ln-gray-450">Optimized Loop</div>
+                                </div>
+                                <div class="bg-ln-gray-800 p-6 rounded-2xl border border-ln-gray-600/30 text-center">
+                                    <div class="text-3xl font-bold text-ln-orange mb-1">100+</div>
+                                    <div class="text-xs text-ln-gray-450">GLB Assets</div>
+                                </div>
+                                <div class="bg-ln-gray-800 p-6 rounded-2xl border border-ln-gray-600/30 text-center">
+                                    <div class="text-3xl font-bold text-ln-orange mb-1">&lt;100ms</div>
+                                    <div class="text-xs text-ln-gray-450">Load Time</div>
+                                </div>
+                                <div class="bg-ln-gray-800 p-6 rounded-2xl border border-ln-gray-600/30 text-center">
+                                    <div class="text-3xl font-bold text-white mb-1">WebGL 2</div>
+                                    <div class="text-xs text-ln-gray-450">GPU Engine</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </section>
 
             <!-- ABOUT -->
-            <section id="about" class="tab-content hidden">
+            <section id="about" class="tab-content hidden pt-32 pb-8 px-4 sm:px-8">
                 <div class="max-w-3xl mx-auto mt-20">
                     <h2 class="text-3xl font-bold text-ln-gray-900 mb-4">About the project</h2>
                     <p class="text-ln-gray-600 leading-relaxed">Our 3D model library was born from a passion for digital creation. We connect designers, developers, and artists by providing high-quality .glb models along with tools for live editing and building virtual worlds.</p>
@@ -103,7 +189,7 @@
             </section>
 
             <!-- MODELS -->
-            <section id="models" class="tab-content hidden">
+            <section id="models" class="tab-content hidden pt-32 pb-8 px-4 sm:px-8">
                 <div class="mx-auto max-w-[1700px]">
 
                     <!-- Filters -->
@@ -151,7 +237,7 @@
 
                     <!-- Model cards grid -->
                     <div id="models-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 sm:mt-1">
-                        <!-- Cards are loaded dynamically from models.json -->
+                        <!-- Cards loaded dynamically -->
                     </div>
 
                     <!-- Pagination -->
@@ -161,7 +247,7 @@
             </section>
 
             <!-- LIVE EDITOR (placeholder) -->
-            <section id="live-editor" class="tab-content hidden">
+            <section id="live-editor" class="tab-content hidden pt-32 pb-8 px-4 sm:px-8">
                 <div class="max-w-4xl mx-auto mt-20 text-center">
                     <h2 class="text-3xl font-bold text-ln-gray-900 mb-4">Live Editor</h2>
                     <p class="text-ln-gray-500">Edit 3D models in real time – coming soon!</p>
@@ -172,7 +258,7 @@
             </section>
 
             <!-- WORLD BUILDER (placeholder) -->
-            <section id="world-builder" class="tab-content hidden">
+            <section id="world-builder" class="tab-content hidden pt-32 pb-8 px-4 sm:px-8">
                 <div class="max-w-4xl mx-auto mt-20 text-center">
                     <h2 class="text-3xl font-bold text-ln-gray-900 mb-4">World Builder</h2>
                     <p class="text-ln-gray-500">Create vast virtual worlds from ready-made models – coming soon!</p>
@@ -183,7 +269,7 @@
             </section>
 
             <!-- CONTACT (placeholder) -->
-            <section id="contact" class="tab-content hidden">
+            <section id="contact" class="tab-content hidden pt-32 pb-8 px-4 sm:px-8">
                 <div class="max-w-2xl mx-auto mt-20">
                     <h2 class="text-3xl font-bold text-ln-gray-900 mb-4">Contact</h2>
                     <div class="bg-white p-8 rounded-2xl shadow-ln-card ring-1 ring-ln-gray-200 space-y-4">
@@ -198,7 +284,233 @@
         </main>
     </div>
 
+    <!-- Skrypt sterowania interfejsem i logiką aplikacji -->
     <script src="assets/scripts/script.js"></script>
+
+    <!-- Skrypt inicjalizacji tła miasta 3D -->
+    <script>
+      (function init3DCity() {
+        const container = document.getElementById('city-canvas-container');
+        if (!container) return;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        if (container.clientWidth > 800) {
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        }
+
+        container.appendChild(renderer.domElement);
+
+        const camera = new THREE.PerspectiveCamera(25, container.clientWidth / container.clientHeight, 1, 500);
+        camera.position.set(0, 13, 16);
+
+        const scene = new THREE.Scene();
+        const city = new THREE.Object3D();
+        const smoke = new THREE.Object3D();
+        const town = new THREE.Object3D();
+
+        scene.add(city);
+        city.add(smoke);
+        city.add(town);
+
+        const baseColor = new THREE.Color(0xF02050);
+        scene.background = baseColor;
+        scene.fog = new THREE.FogExp2(baseColor, 0.05);
+
+        function mathRandom(num = 8) {
+          return -Math.random() * num + Math.random() * num;
+        }
+
+        function buildCity() {
+          const segments = 2;
+          const buildingMat = new THREE.MeshStandardMaterial({
+            color: 0x0a0a0a,
+            roughness: 0.4,
+            metalness: 0.8,
+            side: THREE.DoubleSide
+          });
+
+          const wireframeMat = new THREE.MeshLambertMaterial({
+            color: 0xFFFFFF,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.03,
+            side: THREE.DoubleSide
+          });
+
+          for (let i = 1; i < 120; i++) {
+            const geometry = new THREE.BoxGeometry(1, 1, 1, segments, segments, segments);
+            const cube = new THREE.Mesh(geometry, buildingMat);
+            const wire = new THREE.Mesh(geometry, wireframeMat);
+            const floor = new THREE.Mesh(geometry, buildingMat);
+            
+            cube.add(wire);
+            cube.castShadow = true;
+            cube.receiveShadow = true;
+            
+            floor.scale.y = 0.05;
+            cube.scale.y = 0.1 + Math.abs(mathRandom(8));
+            
+            const cubeWidth = 0.9;
+            cube.scale.x = cube.scale.z = cubeWidth + mathRandom(1 - cubeWidth);
+            cube.position.x = Math.round(mathRandom(6));
+            cube.position.z = Math.round(mathRandom(6));
+            
+            floor.position.set(cube.position.x, 0, cube.position.z);
+            
+            town.add(floor);
+            town.add(cube);
+          }
+
+          const particleMat = new THREE.MeshToonMaterial({ color: 0xFFFF00, side: THREE.DoubleSide });
+          const particleGeo = new THREE.CircleGeometry(0.015, 3);
+          
+          for (let h = 0; h < 350; h++) {
+            const particle = new THREE.Mesh(particleGeo, particleMat);
+            particle.position.set(mathRandom(6), mathRandom(6), mathRandom(6));
+            particle.rotation.set(mathRandom(), mathRandom(), mathRandom());
+            smoke.add(particle);
+          }
+
+          const planeMat = new THREE.MeshPhongMaterial({
+            color: 0x050505,
+            side: THREE.DoubleSide,
+            opacity: 0.95,
+            transparent: true
+          });
+          const planeGeo = new THREE.PlaneGeometry(80, 80);
+          const plane = new THREE.Mesh(planeGeo, planeMat);
+          plane.rotation.x = -Math.PI / 2;
+          plane.position.y = -0.001;
+          plane.receiveShadow = true;
+
+          city.add(plane);
+        }
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        const lightFront = new THREE.SpotLight(0xff2255, 15, 30);
+        const lightBack = new THREE.PointLight(0xffffff, 0.8);
+
+        lightFront.position.set(5, 8, 5);
+        lightFront.castShadow = true;
+        lightFront.shadow.mapSize.width = 2048;
+        lightFront.shadow.mapSize.height = 2048;
+
+        lightBack.position.set(0, 6, 0);
+
+        scene.add(ambientLight);
+        city.add(lightFront);
+        scene.add(lightBack);
+
+        const gridHelper = new THREE.GridHelper(60, 120, 0xFF0055, 0x222222);
+        gridHelper.position.y = 0.001;
+        city.add(gridHelper);
+
+        function createTraffic() {
+          const carMat = new THREE.MeshToonMaterial({ color: 0xFFFF00 });
+          const carGeo = new THREE.BoxGeometry(1, 0.05, 0.05);
+
+          for (let i = 0; i < 40; i++) {
+            const car = new THREE.Mesh(carGeo, carMat);
+            const posLimit = 15;
+            const isXAxis = i % 2 === 0;
+
+            if (isXAxis) {
+              car.position.set(-posLimit, Math.abs(mathRandom(4)), mathRandom(4));
+              gsap.to(car.position, {
+                x: posLimit,
+                duration: 3 + Math.random() * 3,
+                repeat: -1,
+                yoyo: true,
+                ease: "sine.inOut",
+                delay: Math.random() * 2
+              });
+            } else {
+              car.position.set(mathRandom(4), Math.abs(mathRandom(4)), -posLimit);
+              car.rotation.y = Math.PI / 2;
+              gsap.to(car.position, {
+                z: posLimit,
+                duration: 4 + Math.random() * 3,
+                repeat: -1,
+                yoyo: true,
+                ease: "sine.inOut",
+                delay: Math.random() * 2
+              });
+            }
+            city.add(car);
+          }
+        }
+
+        // Wszystkie pozycje y >= 9
+        const cameraShots = [
+          { pos: { x: 0, y: 13, z: 16 }, lookAt: { x: 0, y: 0, z: 0 }, duration: 8 },
+          { pos: { x: 9, y: 9.5, z: 10 }, lookAt: { x: 0, y: 1, z: 0 }, duration: 7 },
+          { pos: { x: -11, y: 11, z: -11 }, lookAt: { x: 0, y: 1, z: 0 }, duration: 8 },
+          { pos: { x: 3, y: 9.0, z: 14 }, lookAt: { x: 0, y: 1, z: -2 }, duration: 7 }
+        ];
+
+        let currentShot = 0;
+        const targetLookAt = new THREE.Vector3();
+
+        function triggerNextShot() {
+          const shot = cameraShots[currentShot];
+
+          gsap.to(camera.position, {
+            x: shot.pos.x,
+            y: shot.pos.y,
+            z: shot.pos.z,
+            duration: shot.duration,
+            ease: "power2.inOut"
+          });
+
+          gsap.to(targetLookAt, {
+            x: shot.lookAt.x,
+            y: shot.lookAt.y,
+            z: shot.lookAt.z,
+            duration: shot.duration,
+            ease: "power2.inOut",
+            onUpdate: () => camera.lookAt(targetLookAt)
+          });
+
+          const nextHue = (0.95 + Math.random() * 0.1) % 1;
+          const newColor = new THREE.Color().setHSL(nextHue, 0.8, 0.4);
+          gsap.to(scene.fog.color, { r: newColor.r, g: newColor.g, b: newColor.b, duration: shot.duration });
+          gsap.to(scene.background, { r: newColor.r, g: newColor.g, b: newColor.b, duration: shot.duration });
+
+          currentShot = (currentShot + 1) % cameraShots.length;
+          gsap.delayedCall(shot.duration - 0.5, triggerNextShot);
+        }
+
+        let clock = new THREE.Clock();
+
+        function animate() {
+          requestAnimationFrame(animate);
+
+          const elapsedTime = clock.getElapsedTime();
+          city.rotation.y = elapsedTime * 0.04;
+          smoke.rotation.y = elapsedTime * 0.02;
+          smoke.rotation.x = Math.sin(elapsedTime * 0.1) * 0.05;
+          lightFront.intensity = 12 + Math.sin(elapsedTime * 3) * 4;
+
+          camera.lookAt(targetLookAt);
+          renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+          camera.aspect = container.clientWidth / container.clientHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        buildCity();
+        createTraffic();
+        animate();
+        triggerNextShot();
+      })();
+    </script>
 </body>
 
 </html>
