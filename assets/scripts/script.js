@@ -1,6 +1,6 @@
 (function () {
   // ===== TABS (desktop & mobile) =====
-  const navLinks = document.querySelectorAll('#main-nav .nav-link, .mobile-nav-link');
+  const navLinks = document.querySelectorAll('#main-nav .nav-link[data-tab], .mobile-nav-link[data-tab]');
   const tabs = document.querySelectorAll('.tab-content');
 
   function switchTab(targetId) {
@@ -9,6 +9,7 @@
       else l.classList.remove('active');
     });
     tabs.forEach(t => t.classList.toggle('hidden', t.id !== targetId));
+    window.dispatchEvent(new CustomEvent('kam3d-tab-change', { detail: { tab: targetId } }));
   }
 
   navLinks.forEach(link => {
@@ -18,6 +19,13 @@
       document.getElementById('mobile-menu').classList.add('hidden');
     });
   });
+
+  function openHashTab() {
+    const target = location.hash.slice(1);
+    if (target && document.getElementById(target) && [...navLinks].some(link => link.dataset.tab === target)) switchTab(target);
+  }
+  openHashTab();
+  window.addEventListener('hashchange', openHashTab);
 
   // Mobile menu toggle
   document.getElementById('mobile-menu-btn').addEventListener('click', () => {
@@ -32,6 +40,7 @@
   let currentCategory = 'all';
   let currentSearch = '';
   let currentPage = 1;
+  let updateDisplay = () => {};
   const perPage = 12;
   const FAVOURITES_KEY = 'kam3d_favourites';
 
@@ -257,13 +266,13 @@
       paginationDiv.appendChild(next);
     }
 
-    function updateDisplay() {
+    updateDisplay = function () {
       const filtered = filterCards();
       cards.forEach(card => card.style.display = 'none');
       const start = (currentPage - 1) * perPage;
       filtered.slice(start, start + perPage).forEach(card => card.style.display = '');
       renderPagination(filtered);
-    }
+    };
 
     // Category buttons (both desktop and mobile)
     categoryBtns.forEach(btn => {
@@ -313,6 +322,20 @@
       const src = encodeURIComponent(fullscreenBtn.dataset.src);
       window.open(`fullscreen.html?src=${src}`, '_blank');
     }
+  });
+
+  window.addEventListener('kam3d-favourites-change', event => {
+    favouriteModels = Array.isArray(event.detail) ? event.detail : getFavourites();
+    cards.forEach(card => {
+      const active = favouriteModels.includes(card.dataset.file);
+      const button = card.querySelector('.favourite-btn');
+      const icon = card.querySelector('.fav-icon');
+      button?.classList.toggle('active', active);
+      icon?.classList.toggle('text-ln-orange', active);
+      icon?.classList.toggle('fill-ln-orange', active);
+      icon?.classList.toggle('stroke-ln-gray-450', !active);
+    });
+    if (currentCategory === 'favourite') { currentPage = 1; updateDisplay(); }
   });
 
   // ===== FAVOURITES (red heart toggle + localStorage) =====

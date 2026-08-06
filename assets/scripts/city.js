@@ -261,8 +261,19 @@
 
     let clock = new THREE.Clock();
 
+    let animationFrame = 0;
+    let cityActive = !document.getElementById('home')?.classList.contains('hidden');
+    function resizeCity() {
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        if (!width || !height) return;
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height, false);
+    }
     function animate() {
-        requestAnimationFrame(animate);
+        animationFrame = requestAnimationFrame(animate);
+        if (!cityActive || !container.isConnected || !container.clientWidth || !container.clientHeight) return;
 
         const elapsedTime = clock.getElapsedTime();
         city.rotation.y = elapsedTime * 0.04;
@@ -274,11 +285,12 @@
         renderer.render(scene, camera);
     }
 
-    window.addEventListener('resize', () => {
-        camera.aspect = container.clientWidth / container.clientHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(container.clientWidth, container.clientHeight);
+    window.addEventListener('resize', resizeCity);
+    window.addEventListener('kam3d-tab-change', event => {
+        cityActive = event.detail?.tab === 'home';
+        if (cityActive) requestAnimationFrame(() => { resizeCity(); clock.getDelta(); renderer.render(scene, camera); });
     });
+    new ResizeObserver(() => { if (cityActive) resizeCity(); }).observe(container);
 
     buildCity();
     createTraffic();
