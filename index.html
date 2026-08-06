@@ -6,10 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
-    <!-- Biblioteki Three.js oraz GSAP dla animacji miasta -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- USUŃ te dwa skrypty - będą ładowane przez import map -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script> -->
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script> -->
+
+    <!-- GSAP nadal potrzebny dla city.js, ale możemy go załadować z CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
-    
+
     <link rel="stylesheet" href="assets/css/styles.css">
     <title>KAM3D - 3D Models Library</title>
     <script>
@@ -91,10 +94,10 @@
 
             <!-- HOME -->
             <section id="home" class="tab-content min-h-screen w-full">
-                
+
                 <!-- 1. HERO SECTION (100dvh x 100dvw) -->
                 <div class="relative w-[100dvw] h-[100dvh] overflow-hidden flex items-center justify-center">
-                    
+
                     <!-- Three.js Canvas Container -->
                     <div id="city-canvas-container" class="absolute inset-0 w-full h-full z-0"></div>
 
@@ -246,15 +249,310 @@
                 </div>
             </section>
 
-            <!-- LIVE EDITOR (placeholder) -->
+            <!-- LIVE EDITOR -->
             <section id="live-editor" class="tab-content hidden pt-32 pb-8 px-4 sm:px-8">
-                <div class="max-w-4xl mx-auto mt-20 text-center">
-                    <h2 class="text-3xl font-bold text-ln-gray-900 mb-4">Live Editor</h2>
-                    <p class="text-ln-gray-500">Edit 3D models in real time – coming soon!</p>
-                    <div class="mt-10 p-10 bg-white rounded-2xl shadow-ln-card ring-1 ring-ln-gray-200 text-ln-gray-400 italic">
-                        [editor panel under construction]
+                <!-- Top bar - PIONOWY Z NOWYMI PRZYCISKAMI -->
+                <div id="le-topbar" class="fixed top-1/2 left-6 -translate-y-1/2 z-[90] bg-white/80 backdrop-blur-xl border border-ln-gray-200 rounded-xl shadow-ln-sidebar flex flex-col items-center gap-1 px-2 py-3">
+                    <!-- Move/Rotate/Scale -->
+                    <button class="le-tb-btn active" id="le-btn-move" data-tip="Move (W)" data-mode="translate">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <polyline points="5 9 2 12 5 15" />
+                            <polyline points="9 5 12 2 15 5" />
+                            <polyline points="15 19 12 22 9 19" />
+                            <polyline points="19 9 22 12 19 15" />
+                            <line x1="2" y1="12" x2="22" y2="12" />
+                            <line x1="12" y1="2" x2="12" y2="22" />
+                        </svg>
+                    </button>
+                    <button class="le-tb-btn" id="le-btn-rotate" data-tip="Rotate (E)" data-mode="rotate">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <polyline points="23 4 23 10 17 10" />
+                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                        </svg>
+                    </button>
+                    <button class="le-tb-btn" id="le-btn-scale" data-tip="Scale (R)" data-mode="scale">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <polyline points="15 3 21 3 21 9" />
+                            <polyline points="9 21 3 21 3 15" />
+                            <line x1="21" y1="3" x2="14" y2="10" />
+                            <line x1="3" y1="21" x2="10" y2="14" />
+                        </svg>
+                    </button>
+
+                    <div class="w-5 h-px bg-ln-gray-200 my-1"></div>
+
+                    <!-- Generate Polymesh -->
+                    <button class="le-tb-btn disabled" id="le-btn-generate" data-tip="Generate Polymesh">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <line x1="3" y1="9" x2="21" y2="9" />
+                            <line x1="3" y1="15" x2="21" y2="15" />
+                            <line x1="9" y1="3" x2="9" y2="21" />
+                            <line x1="15" y1="3" x2="15" y2="21" />
+                        </svg>
+                    </button>
+
+                    <div class="w-5 h-px bg-ln-gray-200 my-1"></div>
+
+                    <!-- NOWE PRZYCISKI -->
+                    <!-- Undo/Redo -->
+                    <button class="le-tb-btn disabled" id="le-btn-undo" data-tip="Undo (Ctrl+Z)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <polyline points="1 4 1 10 7 10" />
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                        </svg>
+                    </button>
+                    <button class="le-tb-btn disabled" id="le-btn-redo" data-tip="Redo (Ctrl+Shift+Z)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <polyline points="23 4 23 10 17 10" />
+                            <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" />
+                        </svg>
+                    </button>
+                    <!-- Delete button -->
+                    <button class="le-tb-btn" id="le-btn-delete" data-tip="Delete (Delete)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <polyline points="3 6 5 6 21 6" />
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            <line x1="10" y1="11" x2="10" y2="17" />
+                            <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                    </button>
+
+                    <div class="w-5 h-px bg-ln-gray-200 my-1"></div>
+
+                    <!-- Multi-select -->
+                    <button class="le-tb-btn" id="le-btn-multiselect" data-tip="Multi-select (Shift)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <rect x="3" y="3" width="7" height="7" rx="1" />
+                            <rect x="14" y="3" width="7" height="7" rx="1" />
+                            <rect x="3" y="14" width="7" height="7" rx="1" />
+                            <rect x="14" y="14" width="7" height="7" rx="1" />
+                        </svg>
+                    </button>
+
+                    <!-- Object Manager -->
+                    <button class="le-tb-btn" id="le-btn-object-manager" data-tip="Object Manager">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <line x1="3" y1="9" x2="21" y2="9" />
+                            <line x1="3" y1="15" x2="21" y2="15" />
+                            <line x1="9" y1="3" x2="9" y2="21" />
+                            <line x1="15" y1="3" x2="15" y2="21" />
+                        </svg>
+                    </button>
+
+                    <!-- Face Edit -->
+                    <button class="le-tb-btn" id="le-btn-face-edit" data-tip="Face Edit">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                            <polyline points="2 17 12 22 22 17" />
+                            <polyline points="2 12 12 17 22 12" />
+                        </svg>
+                    </button>
+
+                    <!-- Tiling -->
+                    <button class="le-tb-btn" id="le-btn-tiling" data-tip="Tiling Array">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <rect x="3" y="3" width="7" height="7" />
+                            <rect x="14" y="3" width="7" height="7" />
+                            <rect x="3" y="14" width="7" height="7" />
+                            <rect x="14" y="14" width="7" height="7" />
+                        </svg>
+                    </button>
+
+                    <div class="w-5 h-px bg-ln-gray-200 my-1"></div>
+
+                    <!-- Import/Export -->
+                    <button class="le-tb-btn" id="le-btn-import" data-tip="Import .glb">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                    </button>
+                    <button class="le-tb-btn" id="le-btn-export" data-tip="Export .glb">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-[17px] h-[17px] stroke-ln-gray-600">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                    </button>
+
+                </div>
+
+                <!-- Status bar -->
+                <div id="le-statusbar" class="fixed bottom-6 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-white/80 backdrop-blur-sm border border-ln-gray-200 rounded-lg text-xs text-ln-gray-500 z-[90] pointer-events-none whitespace-nowrap">Import a .glb file to begin</div>
+
+                <!-- Empty state -->
+                <div id="le-emptystate" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-ln-gray-450 z-50 pointer-events-none">
+                    <h1 class="text-[15px] font-semibold text-ln-gray-600 mb-1.5">No model loaded</h1>
+                    <p class="text-xs">Use the import icon above to load a .glb file</p>
+                </div>
+
+                <!-- Three.js canvas container -->
+                <div id="live-editor-canvas" class="absolute inset-0 w-full h-full"></div>
+
+                <!-- ===== TRANSFORM PANEL ===== -->
+                <div class="transform-panel" id="transform-panel">
+                    <h3>Transform</h3>
+
+                    <!-- Position -->
+                    <div class="field-row">
+                        <label>X</label>
+                        <input id="input-positionX" type="number" step="0.01" />
+                    </div>
+                    <div class="field-row">
+                        <label>Y</label>
+                        <input id="input-positionY" type="number" step="0.01" />
+                    </div>
+                    <div class="field-row">
+                        <label>Z</label>
+                        <input id="input-positionZ" type="number" step="0.01" />
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <!-- Rotation -->
+                    <div class="field-row">
+                        <label>X</label>
+                        <input id="input-rotationX" type="number" step="1" />
+                    </div>
+                    <div class="field-row">
+                        <label>Y</label>
+                        <input id="input-rotationY" type="number" step="1" />
+                    </div>
+                    <div class="field-row">
+                        <label>Z</label>
+                        <input id="input-rotationZ" type="number" step="1" />
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <!-- Scale -->
+                    <div class="field-row">
+                        <label>X</label>
+                        <input id="input-scaleX" type="number" step="0.01" min="0.001" />
+                    </div>
+                    <div class="field-row">
+                        <label>Y</label>
+                        <input id="input-scaleY" type="number" step="0.01" min="0.001" />
+                    </div>
+                    <div class="field-row">
+                        <label>Z</label>
+                        <input id="input-scaleZ" type="number" step="0.01" min="0.001" />
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <!-- Dimensions (read-only) -->
+                    <h3 style="font-size:11px; color:#9CA3AF; margin-bottom:6px;">Dimensions</h3>
+                    <div class="dimension-row">
+                        <label>W</label>
+                        <input id="input-dimX" type="text" readonly />
+                    </div>
+                    <div class="dimension-row">
+                        <label>H</label>
+                        <input id="input-dimY" type="text" readonly />
+                    </div>
+                    <div class="dimension-row">
+                        <label>D</label>
+                        <input id="input-dimZ" type="text" readonly />
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <!-- Center -->
+                    <h3 style="font-size:11px; color:#9CA3AF; margin-bottom:6px;">Center</h3>
+                    <div class="dimension-row">
+                        <label>X</label>
+                        <input id="input-centerX" type="text" readonly />
+                    </div>
+                    <div class="dimension-row">
+                        <label>Y</label>
+                        <input id="input-centerY" type="text" readonly />
+                    </div>
+                    <div class="dimension-row">
+                        <label>Z</label>
+                        <input id="input-centerZ" type="text" readonly />
+                    </div>
+
+                    <!-- Selection count -->
+                    <div class="section-divider"></div>
+                    <div style="font-size:11px; color:#6B7280; text-align:center;" id="selected-count">0 object(s) selected</div>
+                </div>
+
+                <!-- ===== OBJECT MANAGER PANEL ===== -->
+                <div id="object-manager-panel" class="floating-panel hidden" data-panel="object-manager">
+                    <div class="panel-header">
+                        <h3>Object Manager</h3>
+                        <button class="panel-close" aria-label="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                    </div>
+                    <input class="search-input" id="object-search" type="text" placeholder="Search objects..." />
+                    <div id="object-manager-list"></div>
+                    <div style="font-size:10px; color:#9CA3AF; text-align:center; margin-top:8px;" id="object-manager-count">0 objects</div>
+                    <div style="display:flex; gap:6px; margin-top:10px;">
+                        <button id="om-group" style="flex:1; padding:4px 8px; border:1px solid #E5E7EB; border-radius:4px; background:#F9FAFB; font-size:11px; cursor:pointer;">Group</button>
+                        <button id="om-ungroup" style="flex:1; padding:4px 8px; border:1px solid #E5E7EB; border-radius:4px; background:#F9FAFB; font-size:11px; cursor:pointer;">Ungroup</button>
+                        <button id="om-show-all" style="flex:1; padding:4px 8px; border:1px solid #E5E7EB; border-radius:4px; background:#F9FAFB; font-size:11px; cursor:pointer;">Show All</button>
                     </div>
                 </div>
+
+                <!-- ===== FACE EDIT PANEL ===== -->
+                <div id="face-edit-panel" class="floating-panel hidden" data-panel="face-edit">
+                    <div class="panel-header">
+                        <h3>Face Edit</h3>
+                        <button class="panel-close" aria-label="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                    </div>
+                    <div class="face-edit-controls">
+                        <span class="count" id="selected-faces-count">0 faces selected</span>
+                        <input id="fe-distance" type="number" value="0.5" step="0.1" />
+                        <button id="fe-extrude" style="padding:4px 12px; background:#F05023; color:white; border:none; border-radius:4px; font-size:11px; cursor:pointer;">Extrude</button>
+                        <button id="fe-clear" style="padding:4px 12px; background:#F3F4F6; border:1px solid #E5E7EB; border-radius:4px; font-size:11px; cursor:pointer;">Clear</button>
+                        <button id="fe-exit" style="padding:4px 12px; background:#F3F4F6; border:1px solid #E5E7EB; border-radius:4px; font-size:11px; cursor:pointer;">Exit</button>
+                    </div>
+                </div>
+
+                <!-- ===== TILING PANEL ===== -->
+                <div id="tiling-panel" class="floating-panel hidden" data-panel="tiling">
+                    <div class="panel-header">
+                        <h3>Tiling Array</h3>
+                        <button class="panel-close" aria-label="Close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                    </div>
+                    <div class="tiling-controls">
+                        <div class="mode-buttons">
+                            <button id="tiling-mode-grid" class="active">Grid</button>
+                            <button id="tiling-mode-radial">Radial</button>
+                        </div>
+
+                        <div id="grid-settings" class="settings-group">
+                            <input id="tiling-countX" type="number" value="3" min="1" />
+                            <span style="font-size:11px; color:#6B7280;">×</span>
+                            <input id="tiling-countZ" type="number" value="3" min="1" />
+                            <span style="font-size:11px; color:#6B7280;">spacing</span>
+                            <input id="tiling-spacingX" type="number" value="2" step="0.5" />
+                            <input id="tiling-spacingZ" type="number" value="2" step="0.5" />
+                        </div>
+
+                        <div id="radial-settings" class="settings-group" style="display:none;">
+                            <input id="tiling-radial-count" type="number" value="8" min="1" />
+                            <span style="font-size:11px; color:#6B7280;">radius</span>
+                            <input id="tiling-radial-radius" type="number" value="5" step="0.5" />
+                        </div>
+
+                        <div class="settings-group">
+                            <span style="font-size:11px; color:#6B7280;">layers</span>
+                            <input id="tiling-layers" type="number" value="1" min="1" />
+                            <span style="font-size:11px; color:#6B7280;">spacing</span>
+                            <input id="tiling-layer-spacing" type="number" value="2" step="0.5" />
+                        </div>
+
+                        <button id="tiling-create" style="padding:4px 12px; background:#F05023; color:white; border:none; border-radius:4px; font-size:11px; cursor:pointer;">Create</button>
+                        <button id="tiling-preview" style="padding:4px 12px; background:#F3F4F6; border:1px solid #E5E7EB; border-radius:4px; font-size:11px; cursor:pointer;">Preview</button>
+                        <span id="tiling-count" style="font-size:11px; color:#6B7280;">0 copies</span>
+                    </div>
+                </div>
+
+                <input type="file" id="le-fileInput" accept=".glb,model/gltf-binary" class="hidden" />
             </section>
 
             <!-- WORLD BUILDER (placeholder) -->
@@ -284,233 +582,23 @@
         </main>
     </div>
 
-    <!-- Skrypt sterowania interfejsem i logiką aplikacji -->
+    <!-- Three.js r128 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <!-- Skrypty aplikacji -->
+    <script src="assets/scripts/city.js"></script>
     <script src="assets/scripts/script.js"></script>
 
-    <!-- Skrypt inicjalizacji tła miasta 3D -->
-    <script>
-      (function init3DCity() {
-        const container = document.getElementById('city-canvas-container');
-        if (!container) return;
+    <!-- live-editor.js - jako zwykły skrypt (NIE moduł) -->
+    <script src="assets/scripts/live-editor.js"></script>
 
-        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-        if (container.clientWidth > 800) {
-          renderer.shadowMap.enabled = true;
-          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        }
-
-        container.appendChild(renderer.domElement);
-
-        const camera = new THREE.PerspectiveCamera(25, container.clientWidth / container.clientHeight, 1, 500);
-        camera.position.set(0, 13, 16);
-
-        const scene = new THREE.Scene();
-        const city = new THREE.Object3D();
-        const smoke = new THREE.Object3D();
-        const town = new THREE.Object3D();
-
-        scene.add(city);
-        city.add(smoke);
-        city.add(town);
-
-        const baseColor = new THREE.Color(0xF02050);
-        scene.background = baseColor;
-        scene.fog = new THREE.FogExp2(baseColor, 0.05);
-
-        function mathRandom(num = 8) {
-          return -Math.random() * num + Math.random() * num;
-        }
-
-        function buildCity() {
-          const segments = 2;
-          const buildingMat = new THREE.MeshStandardMaterial({
-            color: 0x0a0a0a,
-            roughness: 0.4,
-            metalness: 0.8,
-            side: THREE.DoubleSide
-          });
-
-          const wireframeMat = new THREE.MeshLambertMaterial({
-            color: 0xFFFFFF,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.03,
-            side: THREE.DoubleSide
-          });
-
-          for (let i = 1; i < 120; i++) {
-            const geometry = new THREE.BoxGeometry(1, 1, 1, segments, segments, segments);
-            const cube = new THREE.Mesh(geometry, buildingMat);
-            const wire = new THREE.Mesh(geometry, wireframeMat);
-            const floor = new THREE.Mesh(geometry, buildingMat);
-            
-            cube.add(wire);
-            cube.castShadow = true;
-            cube.receiveShadow = true;
-            
-            floor.scale.y = 0.05;
-            cube.scale.y = 0.1 + Math.abs(mathRandom(8));
-            
-            const cubeWidth = 0.9;
-            cube.scale.x = cube.scale.z = cubeWidth + mathRandom(1 - cubeWidth);
-            cube.position.x = Math.round(mathRandom(6));
-            cube.position.z = Math.round(mathRandom(6));
-            
-            floor.position.set(cube.position.x, 0, cube.position.z);
-            
-            town.add(floor);
-            town.add(cube);
-          }
-
-          const particleMat = new THREE.MeshToonMaterial({ color: 0xFFFF00, side: THREE.DoubleSide });
-          const particleGeo = new THREE.CircleGeometry(0.015, 3);
-          
-          for (let h = 0; h < 350; h++) {
-            const particle = new THREE.Mesh(particleGeo, particleMat);
-            particle.position.set(mathRandom(6), mathRandom(6), mathRandom(6));
-            particle.rotation.set(mathRandom(), mathRandom(), mathRandom());
-            smoke.add(particle);
-          }
-
-          const planeMat = new THREE.MeshPhongMaterial({
-            color: 0x050505,
-            side: THREE.DoubleSide,
-            opacity: 0.95,
-            transparent: true
-          });
-          const planeGeo = new THREE.PlaneGeometry(80, 80);
-          const plane = new THREE.Mesh(planeGeo, planeMat);
-          plane.rotation.x = -Math.PI / 2;
-          plane.position.y = -0.001;
-          plane.receiveShadow = true;
-
-          city.add(plane);
-        }
-
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-        const lightFront = new THREE.SpotLight(0xff2255, 15, 30);
-        const lightBack = new THREE.PointLight(0xffffff, 0.8);
-
-        lightFront.position.set(5, 8, 5);
-        lightFront.castShadow = true;
-        lightFront.shadow.mapSize.width = 2048;
-        lightFront.shadow.mapSize.height = 2048;
-
-        lightBack.position.set(0, 6, 0);
-
-        scene.add(ambientLight);
-        city.add(lightFront);
-        scene.add(lightBack);
-
-        const gridHelper = new THREE.GridHelper(60, 120, 0xFF0055, 0x222222);
-        gridHelper.position.y = 0.001;
-        city.add(gridHelper);
-
-        function createTraffic() {
-          const carMat = new THREE.MeshToonMaterial({ color: 0xFFFF00 });
-          const carGeo = new THREE.BoxGeometry(1, 0.05, 0.05);
-
-          for (let i = 0; i < 40; i++) {
-            const car = new THREE.Mesh(carGeo, carMat);
-            const posLimit = 15;
-            const isXAxis = i % 2 === 0;
-
-            if (isXAxis) {
-              car.position.set(-posLimit, Math.abs(mathRandom(4)), mathRandom(4));
-              gsap.to(car.position, {
-                x: posLimit,
-                duration: 3 + Math.random() * 3,
-                repeat: -1,
-                yoyo: true,
-                ease: "sine.inOut",
-                delay: Math.random() * 2
-              });
-            } else {
-              car.position.set(mathRandom(4), Math.abs(mathRandom(4)), -posLimit);
-              car.rotation.y = Math.PI / 2;
-              gsap.to(car.position, {
-                z: posLimit,
-                duration: 4 + Math.random() * 3,
-                repeat: -1,
-                yoyo: true,
-                ease: "sine.inOut",
-                delay: Math.random() * 2
-              });
-            }
-            city.add(car);
-          }
-        }
-
-        // Wszystkie pozycje y >= 9
-        const cameraShots = [
-          { pos: { x: 0, y: 13, z: 16 }, lookAt: { x: 0, y: 0, z: 0 }, duration: 8 },
-          { pos: { x: 9, y: 9.5, z: 10 }, lookAt: { x: 0, y: 1, z: 0 }, duration: 7 },
-          { pos: { x: -11, y: 11, z: -11 }, lookAt: { x: 0, y: 1, z: 0 }, duration: 8 },
-          { pos: { x: 3, y: 9.0, z: 14 }, lookAt: { x: 0, y: 1, z: -2 }, duration: 7 }
-        ];
-
-        let currentShot = 0;
-        const targetLookAt = new THREE.Vector3();
-
-        function triggerNextShot() {
-          const shot = cameraShots[currentShot];
-
-          gsap.to(camera.position, {
-            x: shot.pos.x,
-            y: shot.pos.y,
-            z: shot.pos.z,
-            duration: shot.duration,
-            ease: "power2.inOut"
-          });
-
-          gsap.to(targetLookAt, {
-            x: shot.lookAt.x,
-            y: shot.lookAt.y,
-            z: shot.lookAt.z,
-            duration: shot.duration,
-            ease: "power2.inOut",
-            onUpdate: () => camera.lookAt(targetLookAt)
-          });
-
-          const nextHue = (0.95 + Math.random() * 0.1) % 1;
-          const newColor = new THREE.Color().setHSL(nextHue, 0.8, 0.4);
-          gsap.to(scene.fog.color, { r: newColor.r, g: newColor.g, b: newColor.b, duration: shot.duration });
-          gsap.to(scene.background, { r: newColor.r, g: newColor.g, b: newColor.b, duration: shot.duration });
-
-          currentShot = (currentShot + 1) % cameraShots.length;
-          gsap.delayedCall(shot.duration - 0.5, triggerNextShot);
-        }
-
-        let clock = new THREE.Clock();
-
-        function animate() {
-          requestAnimationFrame(animate);
-
-          const elapsedTime = clock.getElapsedTime();
-          city.rotation.y = elapsedTime * 0.04;
-          smoke.rotation.y = elapsedTime * 0.02;
-          smoke.rotation.x = Math.sin(elapsedTime * 0.1) * 0.05;
-          lightFront.intensity = 12 + Math.sin(elapsedTime * 3) * 4;
-
-          camera.lookAt(targetLookAt);
-          renderer.render(scene, camera);
-        }
-
-        window.addEventListener('resize', () => {
-          camera.aspect = container.clientWidth / container.clientHeight;
-          camera.updateProjectionMatrix();
-          renderer.setSize(container.clientWidth, container.clientHeight);
-        });
-
-        buildCity();
-        createTraffic();
-        animate();
-        triggerNextShot();
-      })();
-    </script>
 </body>
 
 </html>
