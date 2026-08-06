@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f7f8fa" />
+  <title>KAM3D Live Editor — 3D Scene Editor</title>
+  <link rel="stylesheet" href="/assets/css/live.css" />
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      window.lucide?.createIcons?.({ attrs: { 'stroke-width': 1.8 } });
+    }, { once: true });
+  </script>
+</head>
+<body>
+  <main id="app">
+    <nav class="site-nav" aria-label="KAM3D sections">
+      <a class="site-nav-link" href="index.html#home">Home</a>
+      <a class="site-nav-link" href="index.html#about">About</a>
+      <a class="site-nav-link" href="index.html#models">Models</a>
+      <a class="site-nav-link active" href="live.html" aria-current="page">Live Editor</a>
+      <a class="site-nav-link" href="index.html#world-builder">World Builder</a>
+      <a class="site-nav-link" href="index.html#contact">Contact</a>
+    </nav>
+    <div id="viewport">
+      <canvas id="sceneCanvas" aria-label="KAM3D Live Editor 3D viewport"></canvas>
+      <div id="selectionBadge" class="glass" hidden>
+        <i data-lucide="box"></i><span id="selectionName">No selection</span>
+      </div>
+      <section id="emptyState" aria-live="polite">
+        <div class="empty-icon"><i data-lucide="package-open"></i></div>
+        <h1>Build your GLB model</h1>
+        <p>Drop GLB files or a whole folder anywhere.<br />Then drag models from the library onto the grid.</p>
+      </section>
+      <div id="dropOverlay">
+        <div class="drop-copy"><i data-lucide="download"></i><strong id="dropTitle">Drop GLB files to import</strong><span id="dropSubtitle">Multiple files and folders are supported</span></div>
+      </div>
+    </div>
+
+    <nav id="topbar" class="glass" aria-label="World builder tools">
+      <div class="tool-group">
+        <button class="tool-btn active" id="selectBtn" data-tooltip="Selection mode • Object / Part / Face • Q" aria-label="Open selection modes"><i data-lucide="mouse-pointer-2"></i></button>
+        <button class="tool-btn" id="selectAreaBtn" data-tooltip="Select area • drag a grid over objects" aria-label="Select objects in an area"><i data-lucide="scan-search"></i></button>
+        <button class="tool-btn active" id="moveBtn" data-tooltip="Move • W" aria-label="Toggle move gizmo"><i data-lucide="move-3d"></i></button>
+        <button class="tool-btn" id="rotateBtn" data-tooltip="Rotate • E" aria-label="Toggle rotate gizmo"><i data-lucide="rotate-3d"></i></button>
+        <button class="tool-btn" id="scaleBtn" data-tooltip="Scale • R" aria-label="Toggle scale gizmo"><i data-lucide="scaling"></i></button>
+        <button class="tool-btn" id="meshEditBtn" data-tooltip="Editable Mesh • select, move and extrude surfaces" aria-label="Open Editable Mesh tools"><i data-lucide="box-select"></i></button>
+      </div>
+      <span class="toolbar-separator"></span>
+      <div class="tool-group">
+        <button class="tool-btn active" id="gridBtn" data-tooltip="Grid • double-click for settings" aria-label="Toggle grid"><i data-lucide="grid-3x3"></i><span class="state-dot"></span></button>
+        <button class="tool-btn" id="tilingBtn" data-tooltip="Tiling array" aria-label="Open tiling"><i data-lucide="layout-grid"></i></button>
+        <button class="tool-btn" id="areaArrayBtn" data-tooltip="Area array • draw and fill an area" aria-label="Open area array"><i data-lucide="grid-2x2-plus"></i></button>
+        <button class="tool-btn" id="paintBtn" data-tooltip="Paint & Scatter • paint models onto the scene" aria-label="Open Paint and Scatter"><i data-lucide="paintbrush"></i></button>
+        <button class="tool-btn active" id="snapBtn" data-tooltip="Snapping • double-click for settings" aria-label="Toggle snapping"><i data-lucide="magnet"></i><span class="state-dot"></span></button>
+        <button class="tool-btn" id="duplicateBtn" data-tooltip="Duplicate • Ctrl/Cmd + D" aria-label="Duplicate selection"><i data-lucide="copy-plus"></i></button>
+        <button class="tool-btn" id="deleteBtn" data-tooltip="Delete selected • Delete" aria-label="Delete selection"><i data-lucide="trash-2"></i></button>
+      </div>
+      <span class="toolbar-separator"></span>
+      <div class="tool-group">
+        <button class="tool-btn wide" id="cameraBtn" data-tooltip="Camera and view presets" aria-label="Camera settings"><i data-lucide="scan"></i><span class="tool-label" id="cameraLabel">Perspective</span></button>
+        <button class="tool-btn" id="objectManagerBtn" data-tooltip="Object Manager" aria-label="Open Object Manager"><i data-lucide="list-tree"></i></button>
+      </div>
+      <span class="toolbar-separator"></span>
+      <div class="tool-group">
+        <button class="tool-btn" id="multiBtn" data-tooltip="Multi-select • Shift click" aria-label="Toggle multi-select"><i data-lucide="boxes"></i></button>
+        <button class="tool-btn" id="undoBtn" data-tooltip="Undo • Ctrl/Cmd + Z" aria-label="Undo" disabled><i data-lucide="undo-2"></i></button>
+        <button class="tool-btn" id="redoBtn" data-tooltip="Redo • Ctrl/Cmd + Shift + Z" aria-label="Redo" disabled><i data-lucide="redo-2"></i></button>
+      </div>
+      <span class="toolbar-separator"></span>
+      <div class="tool-group">
+        <button class="tool-btn active" id="shadowsBtn" data-tooltip="Shadows • double-click for settings" aria-label="Toggle shadows"><i data-lucide="cloud-sun"></i><span class="state-dot"></span></button>
+        <button class="tool-btn" id="lightingBtn" data-tooltip="Lighting" aria-label="Lighting settings"><i data-lucide="lightbulb"></i></button>
+        <button class="tool-btn" id="paletteBtn" data-tooltip="Model color palette" aria-label="Color palette"><i data-lucide="palette"></i></button>
+        <button class="tool-btn" id="textureBtn" data-tooltip="Texture library and material settings" aria-label="Texture library"><i data-lucide="image"></i></button>
+      </div>
+      <span class="toolbar-separator"></span>
+      <div class="tool-group">
+        <button class="tool-btn" id="importBtn" data-tooltip="Import GLB or project" aria-label="Import"><i data-lucide="upload"></i></button>
+        <button class="tool-btn" id="exportBtn" data-tooltip="Export scene or project" aria-label="Export"><i data-lucide="download"></i></button>
+        <button class="tool-btn" id="manifestBtn" data-tooltip="Scene Manifest JSON" aria-label="Export Scene Manifest JSON"><i data-lucide="file-json"></i></button>
+        <button class="tool-btn" id="settingsBtn" data-tooltip="Settings and shortcuts" aria-label="Settings"><i data-lucide="settings"></i></button>
+      </div>
+    </nav>
+
+    <section id="assetShelf" class="glass" aria-label="GLB model library">
+      <header class="shelf-head">
+        <button id="shelfResizeHandle" data-tooltip="Drag to resize · double-click to expand" aria-label="Resize model library"></button>
+        <div class="shelf-head-left"><i data-lucide="archive"></i><span>GLB Library</span><span id="assetCount">0 models</span></div>
+        <div class="shelf-search"><i data-lucide="search"></i><input id="assetSearchInput" type="search" aria-label="Search models" placeholder="Search models…" autocomplete="off" spellcheck="false" /><button type="button" id="clearAssetSearchBtn" data-tooltip="Clear search" aria-label="Clear model search" hidden><i data-lucide="x"></i></button></div>
+        <div class="shelf-head-right"><div id="sceneStats">0 objects · 0 selected</div><button id="shelfCollapseBtn" data-tooltip="Collapse model library" aria-label="Collapse model library"><i data-lucide="chevron-down"></i></button></div>
+      </header>
+      <div id="assetList">
+        <button class="asset-import" id="shelfImportBtn" title="Import GLB files"><i data-lucide="plus"></i></button>
+        <div id="assetSearchEmpty" hidden>No models match your search.</div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="selection" style="--panel-order:0; left:410px; top:62px; width:300px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="mouse-pointer-2"></i><span>Selection mode</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="segmented" id="selectionScopeSegment"><button data-selection-scope="object" class="active">Object</button><button data-selection-scope="part">Part</button><button data-selection-scope="face">Face</button></div>
+        <div class="source-status ready" id="selectionScopeStatus"><i data-lucide="box"></i><span>Clicks select complete scene objects.</span></div>
+        <div class="hint-card" style="margin-top:8px">Part selects an individual mesh inside an imported GLB. Face opens Editable Mesh for surface-level editing.</div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="grid" style="--panel-order:1; left:84px; top:62px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="grid-3x3"></i><span>Grid</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="control-row"><div class="control-copy"><strong>Show grid</strong><span>Toggle the construction plane.</span></div><label class="switch"><input id="gridVisibleInput" type="checkbox" checked /><span></span></label></div>
+        <div class="panel-section">
+          <div class="field-grid">
+            <div class="field"><label for="gridSizeInput">World size</label><input id="gridSizeInput" type="number" min="10" max="10000" step="10" value="1000" /></div>
+            <div class="field"><label for="gridDivisionsInput">Divisions</label><input id="gridDivisionsInput" type="number" min="10" max="2000" step="10" value="1000" /></div>
+          </div>
+          <div class="row-stack"><div class="row-label"><span>Grid opacity</span><span class="row-value" id="gridOpacityValue">42%</span></div><input id="gridOpacityInput" type="range" min="5" max="100" value="42" /></div>
+        </div>
+        <div class="panel-section"><button class="action-btn" id="resetGridBtn"><i data-lucide="rotate-ccw"></i>Reset grid</button></div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="position" style="--panel-order:2; left:318px; top:62px; width:300px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="move-3d"></i><span>Position</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="axis-fields" data-transform-fields="position">
+          <label class="axis-field"><span>X</span><input id="positionXInput" type="number" step="0.01" value="0" /></label>
+          <label class="axis-field"><span>Y</span><input id="positionYInput" type="number" step="0.01" value="0" /></label>
+          <label class="axis-field"><span>Z</span><input id="positionZInput" type="number" step="0.01" value="0" /></label>
+        </div>
+        <div class="transform-empty" id="positionEmpty">Select an object or model part to inspect its position.</div>
+        <div class="preview-meta"><span>Coordinate space</span><span id="positionSpaceLabel">World</span></div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="rotation" style="--panel-order:3; left:318px; top:198px; width:300px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="rotate-3d"></i><span>Rotation</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="axis-fields" data-transform-fields="rotation">
+          <label class="axis-field"><span>X</span><input id="rotationXInput" type="number" step="1" value="0" /></label>
+          <label class="axis-field"><span>Y</span><input id="rotationYInput" type="number" step="1" value="0" /></label>
+          <label class="axis-field"><span>Z</span><input id="rotationZInput" type="number" step="1" value="0" /></label>
+        </div>
+        <div class="transform-empty" id="rotationEmpty">Select an object or model part to inspect its rotation.</div>
+        <div class="preview-meta"><span>Units</span><span>Degrees</span></div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="scale" style="--panel-order:4; left:318px; top:334px; width:300px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="scaling"></i><span>Scale</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="axis-fields" data-transform-fields="scale">
+          <label class="axis-field"><span>X</span><input id="scaleXInput" type="number" min="0.001" step="0.01" value="1" /></label>
+          <label class="axis-field"><span>Y</span><input id="scaleYInput" type="number" min="0.001" step="0.01" value="1" /></label>
+          <label class="axis-field"><span>Z</span><input id="scaleZInput" type="number" min="0.001" step="0.01" value="1" /></label>
+        </div>
+        <div class="transform-empty" id="scaleEmpty">Select an object or model part to inspect its scale.</div>
+        <div class="control-row" style="margin-top:8px"><div class="control-copy"><strong>Uniform scale</strong><span>Changing one axis updates all axes proportionally.</span></div><label class="switch"><input id="uniformScaleInput" type="checkbox" /><span></span></label></div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="mesh-edit" style="--panel-order:2; left:318px; top:62px; width:300px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="box-select"></i><span>Editable Mesh</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="source-status" id="meshEditStatus"><i data-lucide="mouse-pointer-2"></i><span>Select one imported GLB object.</span></div>
+        <div class="panel-section button-grid"><button class="action-btn primary" id="convertEditableMeshBtn"><i data-lucide="combine"></i>Convert to editable</button><button class="action-btn" id="toggleMeshEditModeBtn"><i data-lucide="pen-tool"></i><span>Enter edit mode</span></button></div>
+        <div id="meshEditControls" hidden>
+          <div class="panel-section">
+            <div class="section-label">Selection</div>
+            <div class="segmented" id="meshSelectionModeSegment"><button data-mesh-selection="surface" class="active">Surface</button><button data-mesh-selection="triangle">Triangle</button></div>
+            <div class="preview-meta"><span>Selected</span><span id="meshSelectedFaceCount">0 faces</span></div>
+            <button class="action-btn" id="clearMeshSelectionBtn" style="margin-top:7px"><i data-lucide="scan-x"></i>Clear surface selection</button>
+          </div>
+          <div class="panel-section">
+            <div class="control-copy" style="margin-bottom:8px"><strong>Move</strong><span>Use the active Move gizmo to deform the selected surface.</span></div>
+            <div class="field"><label for="meshExtrudeDistanceInput">Extrude distance</label><input id="meshExtrudeDistanceInput" type="number" min="-10000" max="10000" step="0.1" value="0.5" /></div>
+            <button class="action-btn primary" id="extrudeMeshFacesBtn" style="margin-top:8px"><i data-lucide="move-up"></i>Extrude selected</button>
+          </div>
+          <div class="hint-card">Click a surface in the viewport. Shift-click adds or removes surfaces. Surface mode joins connected coplanar GLB triangles.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="tiling" style="--panel-order:2; left:318px; top:62px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="layout-grid"></i><span>Tiling array</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="section-label">Source</div>
+        <div class="segmented array-source-segment" id="tilingSourceSegment"><button data-source="selected" class="active">Selected</button><button data-source="library">Library model</button></div>
+        <div class="source-status" id="tilingSourceStatus"><i data-lucide="mouse-pointer-2"></i><span>Select objects on the scene or choose a library model.</span></div>
+        <div class="panel-section">
+          <div class="section-label">Array type</div>
+          <div class="segmented" id="tilingTypeSegment"><button data-array-type="grid" class="active">Grid</button><button data-array-type="radial">Radial</button></div>
+        </div>
+        <div class="panel-section array-fields" id="tilingGridFields">
+          <div class="field-grid">
+            <div class="field"><label for="tileXInput">Count X</label><input id="tileXInput" type="number" min="1" max="50" value="3" /></div>
+            <div class="field"><label for="tileZInput">Count Z</label><input id="tileZInput" type="number" min="1" max="50" value="3" /></div>
+            <div class="field"><label for="tileGapXInput">Spacing X</label><input id="tileGapXInput" type="number" min="0.01" step="0.25" value="2" /></div>
+            <div class="field"><label for="tileGapZInput">Spacing Z</label><input id="tileGapZInput" type="number" min="0.01" step="0.25" value="2" /></div>
+          </div>
+          <div class="section-label" style="margin-top:9px">Build direction</div>
+          <div class="segmented" id="tileDirectionXSegment"><button data-direction="positive" class="active">+X</button><button data-direction="centered">Center X</button><button data-direction="negative">−X</button></div>
+          <div class="segmented" id="tileDirectionZSegment" style="margin-top:6px"><button data-direction="positive" class="active">+Z</button><button data-direction="centered">Center Z</button><button data-direction="negative">−Z</button></div>
+        </div>
+        <div class="panel-section">
+          <div class="section-label">3D layers</div>
+          <div class="field-grid">
+            <div class="field"><label for="tileYInput">Count Y</label><input id="tileYInput" type="number" min="1" max="50" step="1" value="1" /></div>
+            <div class="field"><label for="tileGapYInput">Spacing Y</label><input id="tileGapYInput" type="number" min="0.01" step="0.25" value="2" /></div>
+          </div>
+          <div class="segmented" id="tileDirectionYSegment" style="margin-top:7px"><button data-direction="positive" class="active">Up</button><button data-direction="centered">Center Y</button><button data-direction="negative">Down</button></div>
+          <div class="section-label" style="margin-top:9px">Start offset</div>
+          <div class="field-grid three">
+            <div class="field"><label for="tileOffsetXInput">X</label><input id="tileOffsetXInput" type="number" step="0.25" value="0" /></div>
+            <div class="field"><label for="tileOffsetYInput">Y</label><input id="tileOffsetYInput" type="number" step="0.25" value="0" /></div>
+            <div class="field"><label for="tileOffsetZInput">Z</label><input id="tileOffsetZInput" type="number" step="0.25" value="0" /></div>
+          </div>
+          <div class="section-label" style="margin-top:9px">Per-layer offset</div>
+          <div class="field-grid">
+            <div class="field"><label for="tileLayerOffsetXInput">Offset X</label><input id="tileLayerOffsetXInput" type="number" step="0.25" value="0" /></div>
+            <div class="field"><label for="tileLayerOffsetZInput">Offset Z</label><input id="tileLayerOffsetZInput" type="number" step="0.25" value="0" /></div>
+          </div>
+          <div class="control-row" style="margin-top:8px"><div class="control-copy"><strong>Alternate layer offset</strong><span>Apply the layer offset only to every second level.</span></div><label class="switch"><input id="tileAlternateLayerInput" type="checkbox" /><span></span></label></div>
+        </div>
+        <div class="panel-section array-fields hidden" id="tilingRadialFields">
+          <div class="field-grid">
+            <div class="field"><label for="radialCountInput">Count</label><input id="radialCountInput" type="number" min="1" max="200" step="1" value="8" /></div>
+            <div class="field"><label for="radialRadiusInput">Radius</label><input id="radialRadiusInput" type="number" min="0.01" step="0.25" value="5" /></div>
+            <div class="field"><label for="radialSpacingInput">Spacing °</label><input id="radialSpacingInput" type="number" min="0.1" max="360" step="1" value="45" /></div>
+            <div class="field"><label for="radialOffsetInput">Offset °</label><input id="radialOffsetInput" type="number" min="-360" max="360" step="1" value="0" /></div>
+          </div>
+          <div class="control-row" style="margin-top:8px"><div class="control-copy"><strong>Face center</strong><span>Rotate every copy toward the center.</span></div><label class="switch"><input id="radialFaceCenterInput" type="checkbox" /><span></span></label></div>
+        </div>
+        <div class="panel-section sequence-block">
+          <div class="section-label">Object + i sequence</div>
+          <div class="control-copy" style="margin-bottom:8px"><span>Additional transform applied to every next tile.</span></div>
+          <div class="section-label">Position per i</div>
+          <div class="field-grid three">
+            <div class="field"><label for="tileSeqPositionXInput">X</label><input id="tileSeqPositionXInput" type="number" step="0.05" value="0" /></div>
+            <div class="field"><label for="tileSeqPositionYInput">Y</label><input id="tileSeqPositionYInput" type="number" step="0.05" value="0" /></div>
+            <div class="field"><label for="tileSeqPositionZInput">Z</label><input id="tileSeqPositionZInput" type="number" step="0.05" value="0" /></div>
+          </div>
+          <div class="section-label" style="margin-top:9px">Rotation per i</div>
+          <div class="field-grid three">
+            <div class="field"><label for="tileSeqRotationXInput">X°</label><input id="tileSeqRotationXInput" type="number" step="1" value="0" /></div>
+            <div class="field"><label for="tileSeqRotationYInput">Y°</label><input id="tileSeqRotationYInput" type="number" step="1" value="0" /></div>
+            <div class="field"><label for="tileSeqRotationZInput">Z°</label><input id="tileSeqRotationZInput" type="number" step="1" value="0" /></div>
+          </div>
+          <div class="section-label" style="margin-top:9px">Scale per i</div>
+          <div class="field-grid three">
+            <div class="field"><label for="tileSeqScaleXInput">X</label><input id="tileSeqScaleXInput" type="number" step="0.05" value="0" /></div>
+            <div class="field"><label for="tileSeqScaleYInput">Y</label><input id="tileSeqScaleYInput" type="number" step="0.05" value="0" /></div>
+            <div class="field"><label for="tileSeqScaleZInput">Z</label><input id="tileSeqScaleZInput" type="number" step="0.05" value="0" /></div>
+          </div>
+        </div>
+        <div class="preview-meta"><span class="preview-live">Live preview</span><span id="tilingPreviewCount">0 copies</span></div>
+        <div class="panel-section"><button class="action-btn primary" id="applyTilingBtn"><i data-lucide="copy-plus"></i>Create array</button></div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="area-array" style="--panel-order:3; left:620px; top:62px; width:300px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="grid-2x2-plus"></i><span>Area array</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="section-label">Source</div>
+        <div class="segmented array-source-segment" id="areaSourceSegment"><button data-source="selected" class="active">Selected</button><button data-source="library">Library model</button></div>
+        <div class="source-status" id="areaSourceStatus"><i data-lucide="mouse-pointer-2"></i><span>Select objects on the scene or choose a library model.</span></div>
+        <div class="panel-section">
+          <div class="section-label">Fill mode</div>
+          <div class="segmented" id="areaFillSegment"><button data-fill="spacing" class="active">Spacing</button><button data-fill="count">Count</button></div>
+        </div>
+        <div class="panel-section">
+          <div class="field-grid" id="areaSpacingFields">
+            <div class="field"><label for="areaSpacingXInput">Spacing X</label><input id="areaSpacingXInput" type="number" min="0.05" step="0.25" value="2" /></div>
+            <div class="field"><label for="areaSpacingZInput">Spacing Z</label><input id="areaSpacingZInput" type="number" min="0.05" step="0.25" value="2" /></div>
+          </div>
+          <div class="field-grid hidden" id="areaCountFields">
+            <div class="field"><label for="areaColumnsInput">Columns</label><input id="areaColumnsInput" type="number" min="1" max="100" step="1" value="5" /></div>
+            <div class="field"><label for="areaRowsInput">Rows</label><input id="areaRowsInput" type="number" min="1" max="100" step="1" value="5" /></div>
+          </div>
+          <div class="field-grid" style="margin-top:7px">
+            <div class="field"><label for="areaMarginInput">Margin</label><input id="areaMarginInput" type="number" min="0" step="0.1" value="0.25" /></div>
+            <div class="field"><label for="areaRotationInput">Rotation °</label><input id="areaRotationInput" type="number" min="-360" max="360" step="1" value="0" /></div>
+          </div>
+        </div>
+        <div class="panel-section">
+          <div class="field-grid">
+            <div class="field"><label for="areaWidthInput">Width</label><input id="areaWidthInput" type="number" min="0.1" step="0.25" value="10" /></div>
+            <div class="field"><label for="areaDepthInput">Depth</label><input id="areaDepthInput" type="number" min="0.1" step="0.25" value="10" /></div>
+          </div>
+          <button class="action-btn" id="drawAreaBtn" style="margin-top:8px"><i data-lucide="pen-tool"></i>Draw new area on scene</button>
+        </div>
+        <div class="panel-section">
+          <div class="section-label">3D layers</div>
+          <div class="field-grid">
+            <div class="field"><label for="areaCountYInput">Count Y</label><input id="areaCountYInput" type="number" min="1" max="50" step="1" value="1" /></div>
+            <div class="field"><label for="areaSpacingYInput">Spacing Y</label><input id="areaSpacingYInput" type="number" min="0.01" step="0.25" value="2" /></div>
+          </div>
+          <div class="segmented" id="areaDirectionYSegment" style="margin-top:7px"><button data-direction="positive" class="active">Up</button><button data-direction="centered">Center Y</button><button data-direction="negative">Down</button></div>
+          <div class="section-label" style="margin-top:9px">Start offset</div>
+          <div class="field-grid three">
+            <div class="field"><label for="areaOffsetXInput">X</label><input id="areaOffsetXInput" type="number" step="0.25" value="0" /></div>
+            <div class="field"><label for="areaOffsetYInput">Y</label><input id="areaOffsetYInput" type="number" step="0.25" value="0" /></div>
+            <div class="field"><label for="areaOffsetZInput">Z</label><input id="areaOffsetZInput" type="number" step="0.25" value="0" /></div>
+          </div>
+          <div class="section-label" style="margin-top:9px">Per-layer offset</div>
+          <div class="field-grid">
+            <div class="field"><label for="areaLayerOffsetXInput">Offset X</label><input id="areaLayerOffsetXInput" type="number" step="0.25" value="0" /></div>
+            <div class="field"><label for="areaLayerOffsetZInput">Offset Z</label><input id="areaLayerOffsetZInput" type="number" step="0.25" value="0" /></div>
+          </div>
+          <div class="control-row" style="margin-top:8px"><div class="control-copy"><strong>Alternate layer offset</strong><span>Useful for brick and wall patterns.</span></div><label class="switch"><input id="areaAlternateLayerInput" type="checkbox" /><span></span></label></div>
+        </div>
+        <div class="panel-section sequence-block">
+          <div class="section-label">Object + i sequence</div>
+          <div class="control-copy" style="margin-bottom:8px"><span>Additional transform applied to every next cell.</span></div>
+          <div class="section-label">Position per i</div>
+          <div class="field-grid three">
+            <div class="field"><label for="areaSeqPositionXInput">X</label><input id="areaSeqPositionXInput" type="number" step="0.05" value="0" /></div>
+            <div class="field"><label for="areaSeqPositionYInput">Y</label><input id="areaSeqPositionYInput" type="number" step="0.05" value="0" /></div>
+            <div class="field"><label for="areaSeqPositionZInput">Z</label><input id="areaSeqPositionZInput" type="number" step="0.05" value="0" /></div>
+          </div>
+          <div class="section-label" style="margin-top:9px">Rotation per i</div>
+          <div class="field-grid three">
+            <div class="field"><label for="areaSeqRotationXInput">X°</label><input id="areaSeqRotationXInput" type="number" step="1" value="0" /></div>
+            <div class="field"><label for="areaSeqRotationYInput">Y°</label><input id="areaSeqRotationYInput" type="number" step="1" value="0" /></div>
+            <div class="field"><label for="areaSeqRotationZInput">Z°</label><input id="areaSeqRotationZInput" type="number" step="1" value="0" /></div>
+          </div>
+          <div class="section-label" style="margin-top:9px">Scale per i</div>
+          <div class="field-grid three">
+            <div class="field"><label for="areaSeqScaleXInput">X</label><input id="areaSeqScaleXInput" type="number" step="0.05" value="0" /></div>
+            <div class="field"><label for="areaSeqScaleYInput">Y</label><input id="areaSeqScaleYInput" type="number" step="0.05" value="0" /></div>
+            <div class="field"><label for="areaSeqScaleZInput">Z</label><input id="areaSeqScaleZInput" type="number" step="0.05" value="0" /></div>
+          </div>
+        </div>
+        <div class="preview-meta"><span class="preview-live">Live preview</span><span id="areaPreviewCount">0 copies</span></div>
+        <div class="panel-section"><button class="action-btn primary" id="applyAreaArrayBtn"><i data-lucide="copy-plus"></i>Create area array</button></div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="select-area" style="--panel-order:2; left:318px; top:62px; width:300px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="scan-search"></i><span>Select area</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="hint-card">Draw or resize a grid to detect existing scene objects.</div>
+        <div class="panel-section">
+          <div class="section-label">Area operation</div>
+          <div class="segmented" id="areaSelectionModeSegment"><button data-selection-mode="replace" class="active">Replace</button><button data-selection-mode="remove">Remove</button><button data-selection-mode="select">Select</button></div>
+        </div>
+        <div class="panel-section" id="areaReplacementSourceSection">
+          <div class="section-label">Replacement source</div>
+          <div class="segmented" id="areaReplacementSourceSegment"><button data-source="selected" class="active">Selected object</button><button data-source="library">Library model</button></div>
+          <div class="source-status" id="areaReplacementSourceStatus"><i data-lucide="mouse-pointer-2"></i><span>Select one object on the scene.</span></div>
+        </div>
+        <div class="panel-section">
+          <div class="section-label">Object inclusion</div>
+          <div class="segmented" id="areaInclusionSegment"><button data-inclusion="center" class="active">Center</button><button data-inclusion="intersects">Intersects</button><button data-inclusion="fully">Fully inside</button></div>
+          <div class="preview-meta"><span>Objects detected</span><span id="areaSelectionCount">0 objects</span></div>
+        </div>
+        <div class="panel-section"><button class="action-btn" id="drawSelectionAreaBtn"><i data-lucide="pen-tool"></i>Draw new selection area</button></div>
+        <div class="panel-section"><button class="action-btn primary" id="selectAreaObjectsBtn"><i data-lucide="scan-search"></i><span>Replace objects</span></button></div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="paint" style="--panel-order:4; left:620px; top:62px; width:300px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="paintbrush"></i><span>Paint &amp; Scatter</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="segmented" id="paintModeSegment"><button data-paint-mode="paint" class="active">Paint</button><button data-paint-mode="erase">Erase</button></div>
+        <div id="paintSourceSection" class="panel-section">
+          <div class="section-label">Source</div>
+          <div class="segmented" id="paintSourceSegment"><button data-source="library" class="active">Library model</button><button data-source="selected">Selected object</button></div>
+          <div class="source-status" id="paintSourceStatus"><i data-lucide="package"></i><span>Choose a model from the bottom library.</span></div>
+        </div>
+        <div id="paintEraseTargetSection" class="panel-section hidden">
+          <div class="section-label">Erase target</div>
+          <div class="segmented" id="paintEraseTargetSegment"><button data-erase-target="current" class="active">Current source</button><button data-erase-target="painted">Painted</button><button data-erase-target="all">All objects</button></div>
+          <div class="hint-card" id="paintEraseTargetHint" style="margin-top:8px">Only painted instances matching the current source can be erased.</div>
+        </div>
+        <div class="panel-section">
+          <div class="field-grid">
+            <div class="field"><label for="paintRadiusInput">Radius</label><input id="paintRadiusInput" type="number" min="0.1" max="100" step="0.25" value="2.5" /></div>
+            <div class="field"><label for="paintDensityInput">Density</label><input id="paintDensityInput" type="number" min="1" max="20" step="1" value="3" /></div>
+            <div class="field"><label for="paintSpacingInput">Stroke spacing</label><input id="paintSpacingInput" type="number" min="0.05" max="100" step="0.25" value="1.5" /></div>
+            <div class="field"><label for="paintMaxSlopeInput">Max slope °</label><input id="paintMaxSlopeInput" type="number" min="0" max="180" step="1" value="55" /></div>
+          </div>
+        </div>
+        <div class="panel-section" id="paintVariationSection">
+          <div class="section-label">Variation</div>
+          <div class="field-grid">
+            <div class="field"><label for="paintScaleMinInput">Scale min</label><input id="paintScaleMinInput" type="number" min="0.01" max="20" step="0.05" value="0.8" /></div>
+            <div class="field"><label for="paintScaleMaxInput">Scale max</label><input id="paintScaleMaxInput" type="number" min="0.01" max="20" step="0.05" value="1.2" /></div>
+          </div>
+          <div class="control-row" style="margin-top:8px"><div class="control-copy"><strong>Random rotation</strong><span>Randomize rotation around the surface normal.</span></div><label class="switch"><input id="paintRandomRotationInput" type="checkbox" checked /><span></span></label></div>
+        </div>
+        <div class="panel-section">
+          <div class="section-label">Placement surface</div>
+          <div class="segmented" id="paintSurfaceSegment"><button data-surface="ground" class="active">Ground only</button><button data-surface="any">Any surface</button></div>
+          <div class="control-row" style="margin-top:8px"><div class="control-copy"><strong>Align to normal</strong><span>Tilt models to match the painted surface.</span></div><label class="switch"><input id="paintAlignNormalInput" type="checkbox" /><span></span></label></div>
+        </div>
+        <div class="hint-card">Hold the left mouse button and drag across the scene. One complete stroke creates one Undo step.</div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="snapping" style="--panel-order:3; left:620px; top:62px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="magnet"></i><span>Snapping</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="control-row"><div class="control-copy"><strong>Enable snapping</strong><span>Applies to placement and gizmos.</span></div><label class="switch"><input id="snapEnabledInput" type="checkbox" checked /><span></span></label></div>
+        <div class="panel-section">
+          <div class="field-grid three">
+            <div class="field"><label for="moveSnapInput">Move</label><input id="moveSnapInput" type="number" min="0.01" step="0.05" value="0.5" /></div>
+            <div class="field"><label for="rotateSnapInput">Rotate °</label><input id="rotateSnapInput" type="number" min="1" max="180" step="1" value="15" /></div>
+            <div class="field"><label for="scaleSnapInput">Scale</label><input id="scaleSnapInput" type="number" min="0.01" step="0.05" value="0.1" /></div>
+          </div>
+        </div>
+        <div class="panel-section">
+          <div class="control-row"><div class="control-copy"><strong>Smart object snapping</strong><span>Align bounding boxes with nearby objects.</span></div><label class="switch"><input id="smartSnapEnabledInput" type="checkbox" checked /><span></span></label></div>
+          <div class="control-row"><div class="control-copy"><strong>Alignment guides</strong><span>Show blue X, Y and Z alignment lines.</span></div><label class="switch"><input id="alignmentGuidesInput" type="checkbox" checked /><span></span></label></div>
+          <div class="control-row"><div class="control-copy"><strong>Edges</strong><span>Snap minimum and maximum bounds.</span></div><label class="switch"><input id="snapEdgesInput" type="checkbox" checked /><span></span></label></div>
+          <div class="control-row"><div class="control-copy"><strong>Centers</strong><span>Snap object and group centers.</span></div><label class="switch"><input id="snapCentersInput" type="checkbox" checked /><span></span></label></div>
+          <div class="field" style="margin-top:8px"><label for="smartSnapDistanceInput">Smart snap distance</label><input id="smartSnapDistanceInput" type="number" min="0.01" max="10" step="0.05" value="0.35" /></div>
+        </div>
+        <div class="panel-section">
+          <div class="section-label">Transform space</div>
+          <div class="segmented" id="spaceSegment"><button data-space="world" class="active">World</button><button data-space="local">Local</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="object-manager" style="--panel-order:5; right:16px; top:62px; width:340px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="list-tree"></i><span>Object Manager</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <input id="objectSearchInput" type="search" placeholder="Search scene objects…" autocomplete="off" spellcheck="false" />
+        <div class="preview-meta"><span>Scene hierarchy</span><span id="objectManagerCount">0 objects</span></div>
+        <div id="objectManagerList"><div id="objectManagerEmpty">The scene has no objects.</div></div>
+        <div class="panel-section">
+          <div class="button-grid"><button class="action-btn" id="groupObjectsBtn"><i data-lucide="group"></i>Group selected</button><button class="action-btn" id="ungroupObjectsBtn"><i data-lucide="ungroup"></i>Ungroup</button></div>
+          <div class="button-grid" style="margin-top:6px"><button class="action-btn" id="showAllObjectsBtn"><i data-lucide="eye"></i>Show all</button><button class="action-btn" id="unlockAllObjectsBtn"><i data-lucide="lock-open"></i>Unlock all</button></div>
+        </div>
+        <div class="hint-card">Click a row to select · Shift-click for multi-select · double-click a name to rename.</div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="camera" style="--panel-order:4; right:16px; top:62px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="scan"></i><span>Camera</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="segmented" id="cameraTypeSegment"><button data-camera="perspective" class="active">Perspective</button><button data-camera="orthographic">Orthographic</button></div>
+        <div class="panel-section">
+          <div class="section-label">View</div>
+          <div class="button-grid">
+            <button class="action-btn view-btn" data-view="iso">Isometric</button><button class="action-btn view-btn" data-view="top">Top</button>
+            <button class="action-btn view-btn" data-view="front">Front</button><button class="action-btn view-btn" data-view="right">Right</button>
+          </div>
+        </div>
+        <div class="panel-section"><button class="action-btn primary" id="focusBtn"><i data-lucide="focus"></i>Focus selection</button></div>
+        <div class="panel-section"><div class="row-stack"><div class="row-label"><span>Perspective FOV</span><span class="row-value" id="fovValue">45°</span></div><input id="fovInput" type="range" min="20" max="90" value="45" /></div></div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="shadows" style="--panel-order:5; left:84px; top:350px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="cloud-sun"></i><span>Shadows</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="control-row"><div class="control-copy"><strong>Enable shadows</strong><span>Real-time directional shadows.</span></div><label class="switch"><input id="shadowsEnabledInput" type="checkbox" checked /><span></span></label></div>
+        <div class="panel-section"><div class="row-stack"><div class="row-label"><span>Ground shadow</span><span class="row-value" id="shadowOpacityValue">22%</span></div><input id="shadowOpacityInput" type="range" min="0" max="70" value="22" /></div></div>
+        <div class="panel-section">
+          <div class="field"><label for="shadowQualityInput">Shadow quality</label><select id="shadowQualityInput"><option value="1024">Balanced · 1024</option><option value="2048" selected>High · 2048</option><option value="4096">Ultra · 4096</option></select></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="lighting" style="--panel-order:6; left:318px; top:350px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="lightbulb"></i><span>Lighting</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="field"><label for="lightingPresetInput">Preset</label><select id="lightingPresetInput"><option value="neutral">Neutral</option><option value="studio">Studio</option><option value="outdoor">Outdoor</option><option value="golden">Golden Hour</option><option value="overcast">Overcast</option><option value="night">Night</option><option value="dramatic">Dramatic</option><option value="custom" disabled>Custom</option></select></div>
+        <div class="row-stack"><div class="row-label"><span>Environment</span><span class="row-value" id="ambientValue">1.2</span></div><input id="ambientInput" type="range" min="0" max="3" step="0.05" value="1.2" /></div>
+        <div class="control-row"><div class="control-copy"><strong>Sky / Ground</strong><span>Hemisphere environment colors.</span></div><input id="ambientSkyInput" type="color" value="#ffffff" /><input id="ambientGroundInput" type="color" value="#31343a" /></div>
+        <div class="row-stack"><div class="row-label"><span>Key light</span><span class="row-value" id="keyValue">2.4</span></div><input id="keyInput" type="range" min="0" max="6" step="0.05" value="2.4" /></div>
+        <div class="control-row"><div class="control-copy"><strong>Key color</strong><span>Main directional light.</span></div><input id="keyColorInput" type="color" value="#ffffff" /></div>
+        <div class="panel-section">
+          <div class="field-grid">
+            <div class="field"><label for="lightElevationInput">Elevation °</label><input id="lightElevationInput" type="number" min="5" max="89" value="48" /></div>
+            <div class="field"><label for="lightAzimuthInput">Azimuth °</label><input id="lightAzimuthInput" type="number" min="-180" max="180" value="-35" /></div>
+          </div>
+        </div>
+        <div class="panel-section">
+          <div class="control-row"><div class="control-copy"><strong>Fill light</strong><span>Softens the shadow side.</span></div><label class="switch"><input id="fillEnabledInput" type="checkbox" checked /><span></span></label></div>
+          <div class="row-stack"><div class="row-label"><span>Fill intensity</span><span class="row-value" id="fillValue">0.7</span></div><input id="fillInput" type="range" min="0" max="4" step="0.05" value="0.7" /></div>
+          <div class="control-row"><div class="control-copy"><strong>Fill color</strong></div><input id="fillColorInput" type="color" value="#9fc5ff" /></div>
+        </div>
+        <div class="panel-section">
+          <div class="control-row"><div class="control-copy"><strong>Rim light</strong><span>Separates silhouettes from the background.</span></div><label class="switch"><input id="rimEnabledInput" type="checkbox" /><span></span></label></div>
+          <div class="row-stack"><div class="row-label"><span>Rim intensity</span><span class="row-value" id="rimValue">1.2</span></div><input id="rimInput" type="range" min="0" max="6" step="0.05" value="1.2" /></div>
+          <div class="control-row"><div class="control-copy"><strong>Rim color</strong></div><input id="rimColorInput" type="color" value="#ffffff" /></div>
+        </div>
+        <div class="panel-section">
+          <div class="row-stack"><div class="row-label"><span>Exposure</span><span class="row-value" id="exposureValue">1.0</span></div><input id="exposureInput" type="range" min="0.2" max="2.5" step="0.05" value="1" /></div>
+          <div class="field" style="margin-top:8px"><label for="toneMappingInput">Tone mapping</label><select id="toneMappingInput"><option value="aces">ACES Filmic</option><option value="linear">Linear</option><option value="reinhard">Reinhard</option><option value="cineon">Cineon</option></select></div>
+        </div>
+        <div class="panel-section">
+          <div class="section-label">Scene lights</div>
+          <div class="field-grid"><div class="field"><label for="sceneLightTypeInput">Light type</label><select id="sceneLightTypeInput"><option value="point">Point</option><option value="spot">Spot</option><option value="area">Area</option></select></div><div class="field"><label>&nbsp;</label><button class="action-btn primary" id="addSceneLightBtn"><i data-lucide="plus"></i>Add light</button></div></div>
+          <div class="hint-card" style="margin-top:8px">Scene lights behave like objects: select, move, rotate, duplicate, lock and group them in Object Manager.</div>
+        </div>
+        <div class="panel-section" id="selectedLightSection" hidden>
+          <div class="section-label">Selected light · <span id="selectedLightName">Light</span></div>
+          <div class="control-row"><div class="control-copy"><strong>Color</strong><span id="selectedLightTypeLabel">Point light</span></div><input id="sceneLightColorInput" type="color" value="#ffffff" /></div>
+          <div class="field-grid" style="margin-top:8px"><div class="field"><label for="sceneLightIntensityInput">Intensity</label><input id="sceneLightIntensityInput" type="number" min="0" max="100000" step="0.1" value="10" /></div><div class="field" id="sceneLightRangeField"><label for="sceneLightRangeInput">Range</label><input id="sceneLightRangeInput" type="number" min="0" max="10000" step="0.1" value="12" /></div></div>
+          <div class="field" id="sceneLightDecayField" style="margin-top:8px"><label for="sceneLightDecayInput">Decay</label><input id="sceneLightDecayInput" type="number" min="0" max="4" step="0.05" value="2" /></div>
+          <div id="sceneLightSpotFields" hidden>
+            <div class="field-grid" style="margin-top:8px"><div class="field"><label for="sceneLightAngleInput">Cone angle °</label><input id="sceneLightAngleInput" type="number" min="1" max="89" step="1" value="35" /></div><div class="field"><label for="sceneLightPenumbraInput">Penumbra</label><input id="sceneLightPenumbraInput" type="number" min="0" max="1" step="0.05" value="0.25" /></div></div>
+          </div>
+          <div id="sceneLightAreaFields" hidden>
+            <div class="field-grid" style="margin-top:8px"><div class="field"><label for="sceneLightWidthInput">Width</label><input id="sceneLightWidthInput" type="number" min="0.05" max="1000" step="0.1" value="4" /></div><div class="field"><label for="sceneLightHeightInput">Height</label><input id="sceneLightHeightInput" type="number" min="0.05" max="1000" step="0.1" value="4" /></div></div>
+          </div>
+          <div class="control-row" id="sceneLightShadowRow" style="margin-top:8px"><div class="control-copy"><strong>Cast shadows</strong><span>Local shadow maps can be expensive.</span></div><label class="switch"><input id="sceneLightShadowInput" type="checkbox" /><span></span></label></div>
+          <div class="field" id="sceneLightShadowQualityField" style="margin-top:8px"><label for="sceneLightShadowQualityInput">Shadow quality</label><select id="sceneLightShadowQualityInput"><option value="512">Low · 512</option><option value="1024" selected>Balanced · 1024</option><option value="2048">High · 2048</option></select></div>
+        </div>
+        <div class="panel-section"><button class="action-btn" id="resetLightingBtn"><i data-lucide="rotate-ccw"></i>Reset lighting</button></div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="palette" style="--panel-order:7; left:620px; top:120px; width:390px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="palette"></i><span>Model palette</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="section-label">Recent colors</div>
+        <div class="palette-grid" id="recentColorGrid"></div>
+        <div class="panel-section">
+          <div class="section-label">Color families</div>
+          <div class="palette-families" id="paletteFamilies"></div>
+        </div>
+        <div class="panel-section"><div class="control-row"><div class="control-copy"><strong>Custom color</strong><span id="currentColorLabel">#f2f2f2</span></div><div class="current-color-chip" id="currentColorChip" style="--current-color:#f2f2f2"></div><input id="customColorInput" type="color" value="#f2f2f2" /></div></div>
+        <div class="panel-section"><div class="section-label">Apply mode</div><div class="segmented" id="paletteModeSegment"><button data-mode="replace" class="active">Replace</button><button data-mode="tint">Tint</button></div></div>
+        <div class="panel-section button-grid"><button class="action-btn primary" id="applyColorBtn"><i data-lucide="paint-bucket"></i>Apply color</button><button class="action-btn" id="resetColorBtn"><i data-lucide="rotate-ccw"></i>Reset original</button></div>
+        <div class="hint-card" style="margin-top:8px">Tint preserves the light and dark relationships between materials.</div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="textures" style="--panel-order:8; left:620px; top:120px; width:410px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="image"></i><span>Textures & Material</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="source-status" id="textureTargetStatus"><i data-lucide="mouse-pointer-2"></i><span>Select an object or model part.</span></div>
+        <div class="panel-section">
+          <div class="section-label">Texture library</div>
+          <div class="texture-grid" id="textureGrid"></div>
+          <div class="drop-zone" id="textureDropZone" style="margin-top:8px"><i data-lucide="image-plus"></i><strong>Drop texture files</strong><span>PNG, JPG or WebP · multiple files supported</span></div>
+          <button class="action-btn" id="chooseTexturesBtn" style="margin-top:7px"><i data-lucide="folder-open"></i>Select texture files</button>
+        </div>
+        <div class="panel-section">
+          <div class="section-label">Map channel</div>
+          <div class="segmented" id="textureChannelSegment"><button data-texture-channel="map" class="active">Base</button><button data-texture-channel="normalMap">Normal</button><button data-texture-channel="roughnessMap">Rough</button><button data-texture-channel="metalnessMap">Metal</button></div>
+          <div class="button-grid" style="margin-top:8px"><button class="action-btn primary" id="applyTextureBtn"><i data-lucide="paint-bucket"></i>Apply texture</button><button class="action-btn" id="removeTextureBtn"><i data-lucide="image-off"></i>Remove map</button></div>
+        </div>
+        <div class="panel-section">
+          <div class="section-label">Material</div>
+          <div class="field-grid"><div class="field"><label for="materialRoughnessInput">Roughness</label><input id="materialRoughnessInput" type="number" min="0" max="1" step="0.01" value="0.7" /></div><div class="field"><label for="materialMetalnessInput">Metalness</label><input id="materialMetalnessInput" type="number" min="0" max="1" step="0.01" value="0" /></div></div>
+          <div class="field-grid" style="margin-top:8px"><div class="field"><label for="materialOpacityInput">Opacity</label><input id="materialOpacityInput" type="number" min="0" max="1" step="0.01" value="1" /></div><div class="field"><label for="normalStrengthInput">Normal strength</label><input id="normalStrengthInput" type="number" min="0" max="5" step="0.05" value="1" /></div></div>
+          <div class="section-label" style="margin-top:10px">Texture transform</div>
+          <div class="field-grid"><div class="field"><label for="textureRepeatXInput">Repeat X</label><input id="textureRepeatXInput" type="number" min="0.01" max="100" step="0.1" value="1" /></div><div class="field"><label for="textureRepeatYInput">Repeat Y</label><input id="textureRepeatYInput" type="number" min="0.01" max="100" step="0.1" value="1" /></div><div class="field"><label for="textureRotationInput">Rotation °</label><input id="textureRotationInput" type="number" min="-360" max="360" step="1" value="0" /></div><div class="field"><label for="textureOffsetXInput">Offset X</label><input id="textureOffsetXInput" type="number" step="0.01" value="0" /></div><div class="field"><label for="textureOffsetYInput">Offset Y</label><input id="textureOffsetYInput" type="number" step="0.01" value="0" /></div></div>
+        </div>
+        <div class="hint-card">Material changes use the active selection target: the entire model in Object mode or only selected meshes in Part mode.</div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="import" style="--panel-order:8; right:16px; top:350px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="upload"></i><span>Import</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="drop-zone" id="panelDropZone"><i data-lucide="package-open"></i><strong>Drop GLB files here</strong><span>Embedded textures are supported.<br />You can also drop a whole folder.</span></div>
+        <div class="panel-section button-grid"><button class="action-btn" id="chooseFilesBtn"><i data-lucide="files"></i>GLB files</button><button class="action-btn" id="chooseFolderBtn"><i data-lucide="folder-open"></i>Folder</button></div>
+        <div class="panel-section"><button class="action-btn" id="openProjectBtn"><i data-lucide="folder-up"></i>Open .kamwb project</button></div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="export" style="--panel-order:9; right:318px; top:62px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="download"></i><span>Export</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="control-copy" style="margin-bottom:9px"><strong>GLB scene</strong><span>Exports all placed models as one portable GLB scene.</span></div>
+        <button class="action-btn primary" id="exportGlbBtn"><i data-lucide="box"></i>Export scene.glb</button>
+        <div class="panel-section">
+          <div class="control-copy" style="margin-bottom:9px"><strong>KAM3D project</strong><span>Saves models, transforms and world settings for continued editing.</span></div>
+          <button class="action-btn" id="saveProjectBtn"><i data-lucide="save"></i>Save project.kamwb</button>
+        </div>
+        <div class="panel-section">
+          <div class="control-copy" style="margin-bottom:9px"><strong>Prefab group</strong><span>Turns the current selection into one reusable library asset.</span></div>
+          <div class="field"><label for="prefabNameInput">Prefab name</label><input id="prefabNameInput" type="text" placeholder="My prefab" value="New prefab" /></div>
+          <div class="section-label" style="margin-top:9px">Pivot</div>
+          <div class="segmented" id="prefabPivotSegment"><button data-pivot="bottom" class="active">Bottom center</button><button data-pivot="center">Center</button><button data-pivot="origin">World origin</button></div>
+          <div class="control-row" style="margin-top:8px"><div class="control-copy"><strong>Download GLB</strong><span>Also save a portable copy of the prefab.</span></div><label class="switch"><input id="prefabDownloadInput" type="checkbox" /><span></span></label></div>
+          <button class="action-btn primary" id="createPrefabBtn" style="margin-top:8px"><i data-lucide="package-plus"></i>Create prefab from selection</button>
+          <button class="action-btn" id="unpackPrefabBtn" style="margin-top:6px"><i data-lucide="package-open"></i>Unpack selected prefab</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="manifest" style="--panel-order:10; right:318px; top:62px; width:300px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="file-json"></i><span>Scene Manifest JSON</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="field"><label for="manifestNameInput">Scene name</label><input id="manifestNameInput" type="text" value="KAM3D Scene" /></div>
+        <div class="panel-section"><div class="section-label">Formatting</div><div class="segmented" id="manifestFormatSegment"><button data-format="pretty" class="active">Pretty</button><button data-format="compact">Compact</button></div></div>
+        <div class="panel-section"><div class="section-label">Units</div><div class="segmented" id="manifestUnitsSegment"><button data-units="meters" class="active">Meters</button><button data-units="centimeters">Centimeters</button></div></div>
+        <div class="panel-section">
+          <div class="control-row"><div class="control-copy"><strong>Include camera</strong><span>Position, target, projection and FOV.</span></div><label class="switch"><input id="manifestCameraInput" type="checkbox" checked /><span></span></label></div>
+          <div class="control-row"><div class="control-copy"><strong>Include hidden</strong><span>Export objects hidden in Object Manager.</span></div><label class="switch"><input id="manifestHiddenInput" type="checkbox" /><span></span></label></div>
+        </div>
+        <div class="preview-meta"><span>Manifest content</span><span id="manifestObjectCount">0 objects</span></div>
+        <div class="panel-section"><button class="action-btn primary" id="exportManifestBtn"><i data-lucide="file-down"></i>Export scene.json</button></div>
+        <div class="hint-card">A lightweight scene description for games, tools and custom pipelines. GLB geometry is not embedded.</div>
+      </div>
+    </section>
+
+    <section class="floating-panel" data-panel="settings" style="--panel-order:11; right:16px; top:62px;">
+      <header class="panel-head"><div class="panel-title"><i data-lucide="settings"></i><span>Settings</span></div><button class="panel-close"><i data-lucide="x"></i></button></header>
+      <div class="panel-body">
+        <div class="control-row"><div class="control-copy"><strong>Axes helper</strong><span>Show world X, Y and Z axes.</span></div><label class="switch"><input id="axesInput" type="checkbox" /><span></span></label></div>
+        <div class="control-row"><div class="control-copy"><strong>Camera damping</strong><span>Smooth orbit movement.</span></div><label class="switch"><input id="dampingInput" type="checkbox" checked /><span></span></label></div>
+        <div class="panel-section"><div class="row-stack"><div class="row-label"><span>Gizmo size</span><span class="row-value" id="gizmoSizeValue">1.0</span></div><input id="gizmoSizeInput" type="range" min="0.5" max="1.8" step="0.05" value="1" /></div></div>
+        <div class="panel-section">
+          <div class="section-label">Scene background</div>
+          <div class="segmented" id="backgroundModeSegment"><button data-mode="solid" class="active">Solid</button><button data-mode="gradient">Gradient</button><button data-mode="transparent">Transparent</button></div>
+          <div class="control-row" id="solidBackgroundFields" style="margin-top:8px"><div class="control-copy"><strong>Background color</strong></div><input id="backgroundInput" type="color" value="#f5f6f8" /></div>
+          <div id="gradientBackgroundFields" class="hidden" style="margin-top:8px">
+            <div class="control-row"><div class="control-copy"><strong>Top / Bottom</strong></div><input id="gradientTopInput" type="color" value="#ffffff" /><input id="gradientBottomInput" type="color" value="#eef1f5" /></div>
+            <div class="row-stack"><div class="row-label"><span>Horizon</span><span class="row-value" id="gradientHorizonValue">55%</span></div><input id="gradientHorizonInput" type="range" min="10" max="90" value="55" /></div>
+          </div>
+        </div>
+        <div class="panel-section">
+          <div class="control-row"><div class="control-copy"><strong>Fog</strong><span>Add depth to larger scenes.</span></div><label class="switch"><input id="fogEnabledInput" type="checkbox" checked /><span></span></label></div>
+          <div class="segmented" id="fogTypeSegment" style="margin-top:8px"><button data-fog="linear">Linear</button><button data-fog="exp" class="active">Exponential</button></div>
+          <div class="control-row" style="margin-top:8px"><div class="control-copy"><strong>Fog color</strong></div><input id="fogColorInput" type="color" value="#f5f6f8" /><label class="switch" data-tooltip="Match fog to background"><input id="fogMatchInput" type="checkbox" checked /><span></span></label></div>
+          <div id="fogLinearFields" class="field-grid hidden" style="margin-top:8px"><div class="field"><label for="fogNearInput">Near</label><input id="fogNearInput" type="number" min="0" step="1" value="40" /></div><div class="field"><label for="fogFarInput">Far</label><input id="fogFarInput" type="number" min="1" step="1" value="450" /></div></div>
+          <div id="fogExpFields" class="field" style="margin-top:8px"><label for="fogDensityInput">Density</label><input id="fogDensityInput" type="number" min="0.00001" max="0.1" step="0.0001" value="0.0017" /></div>
+        </div>
+        <div class="panel-section">
+          <div class="section-label">Keyboard</div>
+          <div class="shortcut-list"><span>Move / Rotate / Scale</span><kbd>W E R</kbd><span>Multi-select</span><kbd>Shift</kbd><span>Duplicate</span><kbd>⌘ D</kbd><span>Undo / Redo</span><kbd>⌘ Z</kbd><span>Focus selection</span><kbd>F</kbd><span>Delete</span><kbd>Del</kbd></div>
+        </div>
+        <div class="panel-section button-grid"><button class="action-btn danger" id="clearSceneBtn"><i data-lucide="trash-2"></i>Clear scene</button><button class="action-btn" id="resetViewBtn"><i data-lucide="rotate-ccw"></i>Reset view</button></div>
+      </div>
+    </section>
+
+    <div id="toastStack" aria-live="polite"></div>
+    <div id="cursorTooltip" role="tooltip"></div>
+    <div id="busyOverlay" hidden><div class="busy-card"><div class="spinner"></div><div class="busy-copy"><strong id="busyTitle">Working…</strong><span id="busyDetail">Please wait</span></div></div></div>
+
+    <input id="glbFileInput" type="file" accept=".glb,model/gltf-binary" multiple hidden />
+    <input id="folderInput" type="file" accept=".glb,model/gltf-binary" webkitdirectory directory multiple hidden />
+    <input id="projectInput" type="file" accept=".kamwb,.json,application/json" hidden />
+    <input id="textureFileInput" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden />
+  </main>
+
+  <script type="module" src="live.js"></script>
+</body>
+</html>
